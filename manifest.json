@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "おかん - おせっかいなおかんがWebページにコメント",
+  "version": "1.0.0",
+  "description": "閲覧中のWebページの内容を読み取り、おせっかいな大阪のおかん風のコメントを表示するChrome拡張機能",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["https://openrouter.ai/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

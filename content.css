@@ -1,0 +1,8 @@
+/* Host element only — inner styles live inside Shadow DOM */
+#okan-extension-root {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483647;
+  font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+}
