@@ -70,7 +70,7 @@
     if (host.startsWith("[")) return true; // IPv6
     return EXCLUDED_DOMAINS.some((pattern) => {
       if (pattern.startsWith("*.")) {
-        const suffix = pattern.slice(1); // ".gmo.jp"
+        const suffix = pattern.slice(1);
         return host === pattern.slice(2) || host.endsWith(suffix);
       }
       return host === pattern;
