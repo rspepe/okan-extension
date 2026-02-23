@@ -150,6 +150,12 @@
         color: #999;
         font-size: 13px;
       }
+      .okan-meta {
+        font-size: 11px;
+        color: #aaa;
+        margin-left: 6px;
+        flex: 1;
+      }
     `;
     shadow.appendChild(style);
 
@@ -161,6 +167,7 @@
     bubble.innerHTML = `
       <div class="okan-header">
         <span class="okan-label">${strings.label}</span>
+        <span class="okan-meta" hidden></span>
         <button class="okan-close" aria-label="${strings.close}">&times;</button>
       </div>
       <p class="okan-text okan-loading">${firstMessage}</p>
@@ -191,11 +198,16 @@
     });
 
     return {
-      setText(text) {
+      setResult(text, model, tokensUsed) {
         clearInterval(loadingTimer);
         const p = shadow.querySelector(".okan-text");
         p.classList.remove("okan-loading");
         p.textContent = text;
+        if (model) {
+          const meta = shadow.querySelector(".okan-meta");
+          meta.textContent = `${model}  •  ${tokensUsed} tokens`;
+          meta.hidden = false;
+        }
       },
       remove() {
         clearInterval(loadingTimer);
@@ -253,7 +265,7 @@
               const errMsg = response?.error || "不明なエラー";
               console.error("[おかん] response error:", errMsg);
               if (errMsg.includes("APIキーが設定されていません")) {
-                ui.setText(strings.error);
+                ui.setResult(strings.error);
               } else {
                 ui.remove();
                 currentUI = null;
@@ -267,7 +279,7 @@
               currentUI = null;
               return;
             }
-            ui.setText(response.comment);
+            ui.setResult(response.comment, response.model, response.tokensUsed);
           }
         );
       });

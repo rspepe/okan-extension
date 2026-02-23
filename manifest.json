@@ -4,7 +4,12 @@
   "version": "1.0.0",
   "description": "閲覧中のWebページの内容を読み取り、おせっかいな大阪のおかん風のコメントを表示するChrome拡張機能",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["https://openrouter.ai/*"],
+  "host_permissions": [
+    "https://openrouter.ai/*",
+    "https://api.anthropic.com/*",
+    "https://api.openai.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },

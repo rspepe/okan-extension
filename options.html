@@ -9,10 +9,58 @@
   <div class="container">
     <h1>Okan Settings</h1>
     <p class="description">Okan is the strongest and kindest mother in the world. She watches over your browsing with tough love and warm heart — no matter what language she speaks.</p>
+
     <div class="form-group">
-      <label for="apiKey">OpenRouter API Key</label>
-      <input type="password" id="apiKey" placeholder="sk-or-...">
+      <label for="aiService">AI Service</label>
+      <select id="aiService">
+        <option value="openrouter">OpenRouter</option>
+        <option value="anthropic">Anthropic</option>
+        <option value="openai">OpenAI</option>
+        <option value="gemini">Google Gemini</option>
+      </select>
     </div>
+
+    <!-- OpenRouter -->
+    <div class="form-group key-section" id="section-openrouter">
+      <label>OpenRouter API Key</label>
+      <div class="key-row">
+        <input type="password" id="openRouterApiKey" placeholder="sk-or-...">
+        <button class="delete-btn" data-key="openRouterApiKey" data-field="openRouterApiKey">Delete</button>
+      </div>
+    </div>
+
+    <!-- Anthropic -->
+    <div class="form-group key-section" id="section-anthropic" hidden>
+      <label>Anthropic API Key</label>
+      <div class="key-row">
+        <input type="password" id="anthropicApiKey" placeholder="sk-ant-...">
+        <button class="delete-btn" data-key="anthropicApiKey" data-field="anthropicApiKey">Delete</button>
+      </div>
+    </div>
+
+    <!-- OpenAI -->
+    <div class="form-group key-section" id="section-openai" hidden>
+      <label>OpenAI API Key</label>
+      <div class="key-row">
+        <input type="password" id="openAIApiKey" placeholder="sk-...">
+        <button class="delete-btn" data-key="openAIApiKey" data-field="openAIApiKey">Delete</button>
+      </div>
+    </div>
+
+    <!-- Gemini -->
+    <div class="form-group key-section" id="section-gemini" hidden>
+      <label>Google Gemini API Key</label>
+      <div class="key-row">
+        <input type="password" id="geminiApiKey" placeholder="AIza...">
+        <button class="delete-btn" data-key="geminiApiKey" data-field="geminiApiKey">Delete</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="modelSelect">Model</label>
+      <select id="modelSelect"></select>
+    </div>
+
     <div class="form-group">
       <label for="language">Language</label>
       <select id="language">
@@ -22,6 +70,7 @@
         <option value="zh">中文（中国妈妈）</option>
       </select>
     </div>
+
     <button id="save">Save</button>
     <div id="status" class="status" hidden></div>
   </div>

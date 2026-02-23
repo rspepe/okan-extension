@@ -98,9 +98,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   console.log("[おかん] メッセージ受信、API呼び出し開始");
   handleGetComment(message.pageContent)
-    .then((comment) => {
+    .then(({ comment, model, tokensUsed }) => {
       console.log("[おかん] API成功:", comment.slice(0, 50));
-      sendResponse({ success: true, comment });
+      sendResponse({ success: true, comment, model, tokensUsed });
     })
     .catch((err) => {
       console.error("[おかん] API失敗:", err.message);
@@ -125,15 +125,21 @@ async function saveCommentToHistory(comment) {
 }
 
 async function handleGetComment(pageContent) {
-  const { openRouterApiKey, okanLanguage } = await chrome.storage.local.get([
+  const data = await chrome.storage.local.get([
+    "aiService",
     "openRouterApiKey",
+    "anthropicApiKey",
+    "openAIApiKey",
+    "geminiApiKey",
+    "openRouterModel",
+    "anthropicModel",
+    "openAIModel",
+    "geminiModel",
     "okanLanguage",
   ]);
-  if (!openRouterApiKey) {
-    throw new Error("APIキーが設定されていません。拡張機能の設定ページからOpenRouter APIキーを入力してください。");
-  }
 
-  const lang = okanLanguage || "ja";
+  const service = data.aiService || "openrouter";
+  const lang = data.okanLanguage || "ja";
   const systemPrompt = PROMPTS[lang] || PROMPTS.ja;
   const tpl = USER_PROMPT_TEMPLATES[lang] || USER_PROMPT_TEMPLATES.ja;
 
@@ -154,14 +160,51 @@ ${tpl.historyNote}
 ${history.map((c, i) => `${i + 1}. ${c}`).join("\n")}`;
   }
 
+  let result;
+  switch (service) {
+    case "anthropic": {
+      const apiKey = data.anthropicApiKey;
+      if (!apiKey) throw new Error("APIキーが設定されていません。拡張機能の設定ページからAnthropic APIキーを入力してください。");
+      const model = data.anthropicModel || "claude-sonnet-4-6";
+      result = await callAnthropic(apiKey, model, systemPrompt, userPrompt);
+      break;
+    }
+    case "openai": {
+      const apiKey = data.openAIApiKey;
+      if (!apiKey) throw new Error("APIキーが設定されていません。拡張機能の設定ページからOpenAI APIキーを入力してください。");
+      const model = data.openAIModel || "gpt-5.2";
+      result = await callOpenAI(apiKey, model, systemPrompt, userPrompt);
+      break;
+    }
+    case "gemini": {
+      const apiKey = data.geminiApiKey;
+      if (!apiKey) throw new Error("APIキーが設定されていません。拡張機能の設定ページからGemini APIキーを入力してください。");
+      const model = data.geminiModel || "gemini-2.5-flash";
+      result = await callGemini(apiKey, model, systemPrompt, userPrompt);
+      break;
+    }
+    default: {
+      const apiKey = data.openRouterApiKey;
+      if (!apiKey) throw new Error("APIキーが設定されていません。拡張機能の設定ページからOpenRouter APIキーを入力してください。");
+      const model = data.openRouterModel || "google/gemini-2.5-flash";
+      result = await callOpenRouter(apiKey, model, systemPrompt, userPrompt);
+      break;
+    }
+  }
+
+  await saveCommentToHistory(result.comment);
+  return result;
+}
+
+async function callOpenRouter(apiKey, model, systemPrompt, userPrompt) {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${openRouterApiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -169,14 +212,93 @@ ${history.map((c, i) => `${i + 1}. ${c}`).join("\n")}`;
       max_tokens: 256,
     }),
   });
-
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`API error (${res.status}): ${body}`);
+    throw new Error(`OpenRouter API error (${res.status}): ${body}`);
   }
-
   const data = await res.json();
-  const comment = data.choices[0].message.content;
-  await saveCommentToHistory(comment);
-  return comment;
+  return {
+    comment: data.choices[0].message.content,
+    model,
+    tokensUsed: data.usage?.total_tokens ?? 0,
+  };
+}
+
+async function callAnthropic(apiKey, model, systemPrompt, userPrompt) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 256,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Anthropic API error (${res.status}): ${body}`);
+  }
+  const data = await res.json();
+  return {
+    comment: data.content[0].text,
+    model,
+    tokensUsed: (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0),
+  };
+}
+
+async function callOpenAI(apiKey, model, systemPrompt, userPrompt) {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: 256,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`OpenAI API error (${res.status}): ${body}`);
+  }
+  const data = await res.json();
+  return {
+    comment: data.choices[0].message.content,
+    model,
+    tokensUsed: data.usage?.total_tokens ?? 0,
+  };
+}
+
+async function callGemini(apiKey, model, systemPrompt, userPrompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+      generationConfig: { maxOutputTokens: 256 },
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Gemini API error (${res.status}): ${body}`);
+  }
+  const data = await res.json();
+  return {
+    comment: data.candidates[0].content.parts[0].text,
+    model,
+    tokensUsed: data.usageMetadata?.totalTokenCount ?? 0,
+  };
 }

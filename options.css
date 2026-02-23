@@ -65,7 +65,33 @@ select {
   appearance: auto;
 }
 
-button {
+.key-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.key-row input[type="password"] {
+  flex: 1;
+}
+
+.delete-btn {
+  background: #fff;
+  color: #c62828;
+  border: 1px solid #c62828;
+  padding: 10px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.delete-btn:hover {
+  background: #fbe9e7;
+}
+
+button#save {
   background: #e8734a;
   color: #fff;
   border: none;
@@ -75,7 +101,7 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+button#save:hover {
   background: #d4623b;
 }
 
