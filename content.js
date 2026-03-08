@@ -57,10 +57,10 @@
   };
 
   const UI_STRINGS = {
-    ja: { label: "おかんより", close: "閉じる", error: "APIキー設定してへんやん！拡張機能の設定から入れてな！", skipWord: "パス" },
-    en: { label: "From Mom", close: "Close", error: "You haven't set your API key yet, honey! Go to the extension settings and pop it in!", skipWord: "SKIP" },
-    it: { label: "Da Mamma", close: "Chiudi", error: "Non hai messo la chiave API! Vai nelle impostazioni e inseriscila!", skipWord: "PASSO" },
-    zh: { label: "老妈说", close: "关闭", error: "API密钥还没设置呢！去扩展设置里填上！", skipWord: "跳过" },
+    ja: { label: "おかんより", close: "閉じる", error: "APIキー設定してへんやん！拡張機能の設定から入れてな！", skipWord: "パス", blockDomain: "このサイトではもう出てこんといて" },
+    en: { label: "From Mom", close: "Close", error: "You haven't set your API key yet, honey! Go to the extension settings and pop it in!", skipWord: "SKIP", blockDomain: "Don't show on this site" },
+    it: { label: "Da Mamma", close: "Chiudi", error: "Non hai messo la chiave API! Vai nelle impostazioni e inseriscila!", skipWord: "PASSO", blockDomain: "Non mostrare su questo sito" },
+    zh: { label: "老妈说", close: "关闭", error: "API密钥还没设置呢！去扩展设置里填上！", skipWord: "跳过", blockDomain: "不在此网站显示" },
   };
 
   function isExcludedDomain() {
@@ -90,7 +90,7 @@
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  function createUI(strings, lang) {
+  function createUI(strings, lang, hostname) {
     const host = document.createElement("div");
     host.id = "okan-extension-root";
     document.body.appendChild(host);
@@ -156,6 +156,23 @@
         margin-left: 6px;
         flex: 1;
       }
+      .okan-footer {
+        margin-top: 10px;
+        text-align: right;
+      }
+      .okan-block-link {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 11px;
+        color: #bbb;
+        cursor: pointer;
+        text-decoration: underline;
+        font-family: inherit;
+      }
+      .okan-block-link:hover {
+        color: #888;
+      }
     `;
     shadow.appendChild(style);
 
@@ -171,6 +188,9 @@
         <button class="okan-close" aria-label="${strings.close}">&times;</button>
       </div>
       <p class="okan-text okan-loading">${firstMessage}</p>
+      <div class="okan-footer">
+        <button class="okan-block-link">${strings.blockDomain}</button>
+      </div>
     `;
     shadow.appendChild(bubble);
 
@@ -195,6 +215,18 @@
       clearInterval(loadingTimer);
       bubble.classList.remove("visible");
       setTimeout(() => host.remove(), 300);
+    });
+
+    shadow.querySelector(".okan-block-link").addEventListener("click", () => {
+      chrome.storage.local.get("okanBlockedDomains", (data) => {
+        const list = data.okanBlockedDomains || [];
+        if (!list.includes(hostname)) list.push(hostname);
+        chrome.storage.local.set({ okanBlockedDomains: list }, () => {
+          clearInterval(loadingTimer);
+          bubble.classList.remove("visible");
+          setTimeout(() => host.remove(), 300);
+        });
+      });
     });
 
     return {
@@ -244,12 +276,15 @@
       // Skip near-empty pages
       if (!pageContent.title && pageContent.bodyText.trim().length < 50) return;
 
-      // 言語設定を取得してからメッセージ送信
-      chrome.storage.local.get("okanLanguage", (langData) => {
-        const lang = langData.okanLanguage || "ja";
+      // 言語設定・ブロックリストを取得してからメッセージ送信
+      chrome.storage.local.get(["okanLanguage", "okanBlockedDomains"], (data) => {
+        const blockedDomains = data.okanBlockedDomains || [];
+        if (blockedDomains.includes(location.hostname)) return;
+
+        const lang = data.okanLanguage || "ja";
         const strings = UI_STRINGS[lang] || UI_STRINGS.ja;
 
-        const ui = createUI(strings, lang);
+        const ui = createUI(strings, lang, location.hostname);
         currentUI = ui;
 
         chrome.runtime.sendMessage(

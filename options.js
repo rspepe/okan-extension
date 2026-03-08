@@ -204,4 +204,35 @@ document.addEventListener("DOMContentLoaded", () => {
     statusEl.hidden = false;
     setTimeout(() => { statusEl.hidden = true; }, 3000);
   }
+
+  // --- Blocked domains ---
+
+  function renderBlockedDomains() {
+    chrome.storage.local.get("okanBlockedDomains", (data) => {
+      const list = data.okanBlockedDomains || [];
+      const listEl = document.getElementById("blocked-domains-list");
+      const emptyMsg = document.getElementById("no-blocked-msg");
+      listEl.innerHTML = "";
+      if (list.length === 0) {
+        emptyMsg.hidden = false;
+        return;
+      }
+      emptyMsg.hidden = true;
+      list.forEach((domain) => {
+        const li = document.createElement("li");
+        li.textContent = domain;
+        const btn = document.createElement("button");
+        btn.className = "unblock-btn";
+        btn.textContent = "Remove";
+        btn.addEventListener("click", () => {
+          const updated = list.filter((d) => d !== domain);
+          chrome.storage.local.set({ okanBlockedDomains: updated }, renderBlockedDomains);
+        });
+        li.appendChild(btn);
+        listEl.appendChild(li);
+      });
+    });
+  }
+
+  renderBlockedDomains();
 });
